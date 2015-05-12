@@ -28,11 +28,15 @@ protected:
 	int					bladeAccel;
 	
 	float				range;
-	int					startDirY;
-	int					startDirX;
-	int					endDirY;
-	int					endDirX;
+
+	float				startDirY;
+	float				startDirX;
+	float				endDirY;
+	float				endDirX;
+
 	int					numHits;
+
+	bool				vert;
 	
 	rvClientEffectPtr	impactEffect;
 	int					impactMaterial;
@@ -109,7 +113,9 @@ void rvWeaponGauntlet::Spawn ( void ) {
 	startDirX		= spawnArgs.GetFloat ( "startDirX", "0" );
 	endDirY			= spawnArgs.GetFloat ( "endDirY", "0" );
 	endDirX			= spawnArgs.GetFloat ( "endDirX", "0" );
-	numHits			= spawnArgs.GetFloat ( "numHits", "1" );
+	numHits			= spawnArgs.GetInt ( "numHits", "1" );
+
+	vert			= spawnArgs.GetBool ( "vert", "0" );
 
 	impactMaterial = -1;
 	impactEffect   = NULL;
@@ -134,7 +140,9 @@ void rvWeaponGauntlet::Save ( idSaveGame *savefile ) const {
 	savefile->WriteFloat ( startDirY );
 	savefile->WriteFloat ( endDirX );
 	savefile->WriteFloat ( endDirY );
-	savefile->WriteFloat ( numHits );
+
+	savefile->WriteInt ( numHits );
+	savefile->WriteBool( vert );
 	
 	savefile->WriteObject ( impactEffect );
 	savefile->WriteInt ( impactMaterial );
@@ -155,11 +163,14 @@ void rvWeaponGauntlet::Restore ( idRestoreGame *savefile ) {
 	savefile->ReadInt ( bladeAccel );
 	
 	savefile->ReadFloat ( range );
-	savefile->ReadInt ( startDirY );
-	savefile->ReadInt ( startDirX );
-	savefile->ReadInt ( endDirY );
-	savefile->ReadInt ( endDirX );
+
+	savefile->ReadFloat ( startDirY );
+	savefile->ReadFloat ( startDirX );
+	savefile->ReadFloat ( endDirY );
+	savefile->ReadFloat ( endDirX );
+
 	savefile->ReadInt ( numHits );
+	savefile->ReadBool ( vert );
 
 	savefile->ReadObject ( reinterpret_cast<idClass*&>( impactEffect ) );
 	savefile->ReadInt ( impactMaterial );
@@ -229,23 +240,80 @@ rvWeaponGauntlet::Attack
 void rvWeaponGauntlet::Attack ( void ) {
 	trace_t		tr;
 	idEntity*	ent;
+	idVec3		xv;
+	idVec3		yv;
 	idVec3		v;
 
 	for(int i = 0; i < numHits; i++)
 	{
-		switch(i){
-		case 0:
-			v = playerViewAxis[1] * (-startDirX/90.0) + playerViewAxis[0] * ((90.0-abs(startDirX))/90.0);
-			break;
-		case 1:
-			v = playerViewAxis[1] * ((-startDirX+(-endDirX))/90.0) + playerViewAxis[0] * ((90.0-abs(startDirX+endDirX))/90.0);
-			break;
-		case 2:
-			v = playerViewAxis[1] * (-endDirX/90.0) + playerViewAxis[0] * ((90.0-abs(endDirX))/90.0);
-			break;
+		if(numHits == 1)
+			v = playerViewAxis[0];
+		if(numHits == 3)
+		{
+			if(vert)
+			{
+				if(i == 0)
+					v = playerViewAxis[2] * (-startDirY/90.0) - playerViewAxis[0] * ((90.0-abs(startDirY))/90.0);
+				if(i == 1)
+					v = playerViewAxis[0];
+				if(i == 2)
+					v = playerViewAxis[2] * (-endDirY/90.0) - playerViewAxis[0] * ((90.0-abs(endDirY))/90.0);
+			}
+			else
+			{
+				if(i == 0)
+					v = playerViewAxis[1] * (-startDirX/90.0) + playerViewAxis[0] * ((90.0-abs(startDirX))/90.0);
+				if(i == 1)
+					v = playerViewAxis[0];
+				if(i == 2)
+					v = playerViewAxis[1] * (-endDirX/90.0) + playerViewAxis[0] * ((90.0-abs(endDirX))/90.0);
+			}
 		}
-		//v = playerViewAxis[1] * (-startDirX/90.0) + playerViewAxis[0] * ((90.0-abs(startDirX))/90.0);
-		//v = playerViewAxis[1] * ((-startDirX/90.0)-(-endDirX/90.0) * i / numHits) + playerViewAxis[0] * (((90.0-abs(startDirX))/90.0)-((90.0-abs(endDirX))/90.0) * i / numHits);
+		if(numHits == 5)
+		{
+			if(vert)
+			{
+				if(i == 0)
+				{
+					xv = playerViewAxis[1] * (-startDirX/90.0) + playerViewAxis[0] * ((90.0-abs(startDirX))/90.0);
+					yv = playerViewAxis[2] * (-startDirY/90.0) + playerViewAxis[0] * ((90.0-abs(startDirY))/90.0);
+					v = xv + yv;
+				}
+				if(i == 1)
+				{
+					xv = playerViewAxis[1] * (-(startDirX-45)/90.0) + playerViewAxis[0] * ((90.0-abs((startDirX-45)))/90.0);
+					yv = playerViewAxis[2] * (-(startDirY-45)/90.0) + playerViewAxis[0] * ((90.0-abs((startDirY-45)))/90.0);
+					v = xv + yv;
+				}
+				if(i == 2)
+					v = playerViewAxis[0];
+				if(i == 3)
+				{
+					xv = playerViewAxis[1] * (-(endDirX+45)/90.0) + playerViewAxis[0] * ((90.0-abs((endDirX+45)))/90.0);
+					yv = playerViewAxis[2] * (-(endDirY+45)/90.0) + playerViewAxis[0] * ((90.0-abs((endDirY+45)))/90.0);
+					v = xv + yv;
+				}
+				if(i == 4)
+				{
+					xv = playerViewAxis[1] * (-endDirX/90.0) + playerViewAxis[0] * ((90.0-abs(endDirX))/90.0);
+					yv = playerViewAxis[2] * (-endDirY/90.0) + playerViewAxis[0] * ((90.0-abs(endDirY))/90.0);
+					v = xv + yv;
+				}
+			}
+			else
+			{
+				if(i == 0)
+					v = playerViewAxis[1] * (-startDirX/90.0) + playerViewAxis[0] * ((90.0-abs(startDirX))/90.0);
+				if(i == 1)
+					v = playerViewAxis[1] * (-(startDirX-45)/90.0) + playerViewAxis[0] * ((90.0-abs((startDirX-45)))/90.0);
+				if(i == 2)
+					v = playerViewAxis[0];
+				if(i == 3)
+					v = playerViewAxis[1] * (-(endDirX+45)/90.0) + playerViewAxis[0] * ((90.0-abs((endDirX+45)))/90.0);
+				if(i == 4)
+					v = playerViewAxis[1] * (-endDirX/90.0) + playerViewAxis[0] * ((90.0-abs(endDirX))/90.0);
+			}
+		}
 	// Cast a ray out to the lock range
 	// RAVEN BEGIN
 	// ddynerman: multiple clip worlds
@@ -271,14 +339,14 @@ void rvWeaponGauntlet::Attack ( void ) {
 		ent = gameLocal.entities[tr.c.entityNum];
 
 		// If the impact material changed then stop the impact effect 
-		if ( (tr.c.materialType && tr.c.materialType->Index ( ) != impactMaterial) ||
+		/*if ( (tr.c.materialType && tr.c.materialType->Index ( ) != impactMaterial) ||
 			 (!tr.c.materialType && impactMaterial != -1) ) {
 			if ( impactEffect ) {
 				impactEffect->Stop ( );
 				impactEffect = NULL;
 			}
 			impactMaterial = -1;
-		}
+		}*/
 	
 		// In singleplayer-- the gauntlet never effects marine AI
 		if( !gameLocal.isMultiplayer ) {
