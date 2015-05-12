@@ -28,6 +28,11 @@ protected:
 	int					bladeAccel;
 	
 	float				range;
+	int					startDirY;
+	int					startDirX;
+	int					endDirY;
+	int					endDirX;
+	int					numHits;
 	
 	rvClientEffectPtr	impactEffect;
 	int					impactMaterial;
@@ -100,6 +105,12 @@ void rvWeaponGauntlet::Spawn ( void ) {
 	
 	range			= spawnArgs.GetFloat ( "range", "32" );
 
+	startDirY		= spawnArgs.GetFloat ( "startDirY", "0" );
+	startDirX		= spawnArgs.GetFloat ( "startDirX", "0" );
+	endDirY			= spawnArgs.GetFloat ( "endDirY", "0" );
+	endDirX			= spawnArgs.GetFloat ( "endDirX", "0" );
+	numHits			= spawnArgs.GetFloat ( "numHits", "1" );
+
 	impactMaterial = -1;
 	impactEffect   = NULL;
 	loopSound = LOOP_NONE;
@@ -119,6 +130,11 @@ void rvWeaponGauntlet::Save ( idSaveGame *savefile ) const {
 	savefile->WriteInt ( bladeAccel );
 	
 	savefile->WriteFloat ( range );
+	savefile->WriteFloat ( startDirX );
+	savefile->WriteFloat ( startDirY );
+	savefile->WriteFloat ( endDirX );
+	savefile->WriteFloat ( endDirY );
+	savefile->WriteFloat ( numHits );
 	
 	savefile->WriteObject ( impactEffect );
 	savefile->WriteInt ( impactMaterial );
@@ -139,7 +155,12 @@ void rvWeaponGauntlet::Restore ( idRestoreGame *savefile ) {
 	savefile->ReadInt ( bladeAccel );
 	
 	savefile->ReadFloat ( range );
-	
+	savefile->ReadInt ( startDirY );
+	savefile->ReadInt ( startDirX );
+	savefile->ReadInt ( endDirY );
+	savefile->ReadInt ( endDirX );
+	savefile->ReadInt ( numHits );
+
 	savefile->ReadObject ( reinterpret_cast<idClass*&>( impactEffect ) );
 	savefile->ReadInt ( impactMaterial );
 	savefile->ReadInt ( loopSound );
@@ -208,97 +229,115 @@ rvWeaponGauntlet::Attack
 void rvWeaponGauntlet::Attack ( void ) {
 	trace_t		tr;
 	idEntity*	ent;
-	
+	idVec3		v;
+
+	for(int i = 0; i < numHits; i++)
+	{
+		switch(i){
+		case 0:
+			v = playerViewAxis[1] * (-startDirX/90.0) + playerViewAxis[0] * ((90.0-abs(startDirX))/90.0);
+			break;
+		case 1:
+			v = playerViewAxis[1] * ((-startDirX+(-endDirX))/90.0) + playerViewAxis[0] * ((90.0-abs(startDirX+endDirX))/90.0);
+			break;
+		case 2:
+			v = playerViewAxis[1] * (-endDirX/90.0) + playerViewAxis[0] * ((90.0-abs(endDirX))/90.0);
+			break;
+		}
+		//v = playerViewAxis[1] * (-startDirX/90.0) + playerViewAxis[0] * ((90.0-abs(startDirX))/90.0);
+		//v = playerViewAxis[1] * ((-startDirX/90.0)-(-endDirX/90.0) * i / numHits) + playerViewAxis[0] * (((90.0-abs(startDirX))/90.0)-((90.0-abs(endDirX))/90.0) * i / numHits);
 	// Cast a ray out to the lock range
-// RAVEN BEGIN
-// ddynerman: multiple clip worlds
-	gameLocal.TracePoint(	owner, tr, 
-							playerViewOrigin, 
-							playerViewOrigin + playerViewAxis[0] * range, 
-							MASK_SHOT_RENDERMODEL, owner );
-// RAVEN END
-	owner->WeaponFireFeedback( &weaponDef->dict );
+	// RAVEN BEGIN
+	// ddynerman: multiple clip worlds
 
-	if ( tr.fraction >= 1.0f ) {
-		if ( impactEffect ) {
-			impactEffect->Stop ( );
-			impactEffect = NULL;
-		}
-		impactMaterial = -1;
-		PlayLoopSound( LOOP_NONE );
- 		return;
-	}
-		
-	// Entity we hit?
-	ent = gameLocal.entities[tr.c.entityNum];
+		gameLocal.TracePoint(	owner, tr, 
+								playerViewOrigin, 
+								playerViewOrigin + v * range, 
+								MASK_SHOT_RENDERMODEL, owner );
+	// RAVEN END
+		owner->WeaponFireFeedback( &weaponDef->dict );
 
-	// If the impact material changed then stop the impact effect 
-	if ( (tr.c.materialType && tr.c.materialType->Index ( ) != impactMaterial) ||
-		 (!tr.c.materialType && impactMaterial != -1) ) {
-		if ( impactEffect ) {
-			impactEffect->Stop ( );
-			impactEffect = NULL;
-		}
-		impactMaterial = -1;
-	}
-	
-	// In singleplayer-- the gauntlet never effects marine AI
-	if( !gameLocal.isMultiplayer ) {
-		idActor* actor_ent = 0;
-		
-		//ignore both the body and the head.
-		if (ent->IsType( idActor::GetClassType()) )	{
-			actor_ent = static_cast<idActor*>(ent);
-		} else if (ent->IsType ( idAFAttachment::GetClassType()) )	{
-			actor_ent = static_cast<idActor*>(ent->GetBindMaster());
-		}
-			
-		if ( actor_ent && actor_ent->team == gameLocal.GetLocalPlayer()->team )	{
+		if ( tr.fraction >= 1.0f ) {
+			if ( impactEffect ) {
+				impactEffect->Stop ( );
+				impactEffect = NULL;
+			}
+			impactMaterial = -1;
 			PlayLoopSound( LOOP_NONE );
-			return;
+ 			return;
 		}
-	}
+		
+		// Entity we hit?
+		ent = gameLocal.entities[tr.c.entityNum];
 
-	//multiplayer-- don't gauntlet dead stuff
-	if( gameLocal.isMultiplayer )	{
-		idPlayer * player;
-		if ( ent->IsType( idPlayer::GetClassType() )) {
-			player = static_cast< idPlayer* >(ent);
-			if (player->health <= 0)	{
+		// If the impact material changed then stop the impact effect 
+		if ( (tr.c.materialType && tr.c.materialType->Index ( ) != impactMaterial) ||
+			 (!tr.c.materialType && impactMaterial != -1) ) {
+			if ( impactEffect ) {
+				impactEffect->Stop ( );
+				impactEffect = NULL;
+			}
+			impactMaterial = -1;
+		}
+	
+		// In singleplayer-- the gauntlet never effects marine AI
+		if( !gameLocal.isMultiplayer ) {
+			idActor* actor_ent = 0;
+		
+			//ignore both the body and the head.
+			if (ent->IsType( idActor::GetClassType()) )	{
+				actor_ent = static_cast<idActor*>(ent);
+			} else if (ent->IsType ( idAFAttachment::GetClassType()) )	{
+				actor_ent = static_cast<idActor*>(ent->GetBindMaster());
+			}
+			
+			if ( actor_ent && actor_ent->team == gameLocal.GetLocalPlayer()->team )	{
+				PlayLoopSound( LOOP_NONE );
 				return;
 			}
 		}
 
-	}
+		//multiplayer-- don't gauntlet dead stuff
+		if( gameLocal.isMultiplayer )	{
+			idPlayer * player;
+			if ( ent->IsType( idPlayer::GetClassType() )) {
+				player = static_cast< idPlayer* >(ent);
+				if (player->health <= 0)	{
+					return;
+				}
+			}
+
+		}
 	
-	if ( !impactEffect ) {
-		impactMaterial = tr.c.materialType ? tr.c.materialType->Index() : -1;
-		impactEffect = gameLocal.PlayEffect ( gameLocal.GetEffect ( spawnArgs, "fx_impact", tr.c.materialType ), tr.endpos, tr.c.normal.ToMat3(), true );
-	} else {
-		impactEffect->SetOrigin ( tr.endpos );
-		impactEffect->SetAxis ( tr.c.normal.ToMat3() );
-	}
+		if ( !impactEffect ) {
+			impactMaterial = tr.c.materialType ? tr.c.materialType->Index() : -1;
+			impactEffect = gameLocal.PlayEffect ( gameLocal.GetEffect ( spawnArgs, "fx_impact", tr.c.materialType ), tr.endpos, tr.c.normal.ToMat3(), true );
+		} else {
+			impactEffect->SetOrigin ( tr.endpos );
+			impactEffect->SetAxis ( tr.c.normal.ToMat3() );
+		}
 	
-	// Do damage?
-	if ( gameLocal.time > nextAttackTime ) {					
-		if ( ent ) {
-			if ( ent->fl.takedamage ) {
-				float dmgScale = 1.0f;
-				dmgScale *= owner->PowerUpModifier( PMOD_MELEE_DAMAGE );
-				ent->Damage ( owner, owner, playerViewAxis[0], spawnArgs.GetString ( "def_damage" ), dmgScale, 0 );
-				StartSound( "snd_hit", SND_CHANNEL_ANY, 0, false, NULL );
-				if ( ent->spawnArgs.GetBool( "bleed" ) ) {
-					PlayLoopSound( LOOP_FLESH );
+		// Do damage?
+		//if ( gameLocal.time > nextAttackTime ) {					
+			if ( ent ) {
+				if ( ent->fl.takedamage ) {
+					float dmgScale = 1.0f;
+					dmgScale *= owner->PowerUpModifier( PMOD_MELEE_DAMAGE );
+					ent->Damage ( owner, owner, playerViewAxis[0], spawnArgs.GetString ( "def_damage" ), dmgScale, 0 );
+					StartSound( "snd_hit", SND_CHANNEL_ANY, 0, false, NULL );
+					if ( ent->spawnArgs.GetBool( "bleed" ) ) {
+						PlayLoopSound( LOOP_FLESH );
+					} else {
+						PlayLoopSound( LOOP_WALL );
+					}
 				} else {
 					PlayLoopSound( LOOP_WALL );
 				}
 			} else {
-				PlayLoopSound( LOOP_WALL );
+				PlayLoopSound( LOOP_NONE );
 			}
-		} else {
-			PlayLoopSound( LOOP_NONE );
-		}
-		nextAttackTime = gameLocal.time + fireRate;
+			nextAttackTime = gameLocal.time + fireRate;
+		//}
 	}
 }
 
