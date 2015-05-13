@@ -243,7 +243,9 @@ void rvWeaponGauntlet::Attack ( void ) {
 	idVec3		xv;
 	idVec3		yv;
 	idVec3		v;
+	idPlayer * player = gameLocal.GetLocalPlayer();
 
+	//player->stamina -= 10;
 	for(int i = 0; i < numHits; i++)
 	{
 		if(numHits == 1)

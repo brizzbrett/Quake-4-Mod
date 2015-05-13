@@ -1339,6 +1339,10 @@ idPlayer::idPlayer() {
 	teamAmmoRegenPending	= false;
 	teamDoubler			= NULL;		
 	teamDoublerPending		= false;
+
+	//stamina = 100.0;
+	//maxStamina = 100;
+	//staminaRegen = 0.1;
 }
 
 /*
@@ -1494,7 +1498,8 @@ idPlayer::Init
 */
 void idPlayer::Init( void ) {
 	const char			*value;
-	
+
+
 	noclip					= false;
 	godmode					= false;
 	godmodeDamage			= 0;
@@ -1763,6 +1768,10 @@ void idPlayer::Init( void ) {
 		teamDoublerPending = false;
 		teamDoubler = PlayEffect( "fx_doubler", renderEntity.origin, renderEntity.axis, true );
 	}
+
+	//stamina					= 100.0;
+	//maxStamina				= 100;
+	//staminaRegen			= 0.1;
 }
 
 /*
@@ -2327,6 +2336,10 @@ void idPlayer::Save( idSaveGame *savefile ) const {
 	// TOSAVE: const idDeclEntityDef*	cachedWeaponDefs [ MAX_WEAPONS ];	// cnicholson: Save these?
 	// TOSAVE: const idDeclEntityDef*	cachedPowerupDefs [ POWERUP_MAX ];
 
+	//savefile->WriteFloat ( stamina );
+	//savefile->WriteInt ( maxStamina );
+	//savefile->WriteFloat ( staminaRegen );
+
 #ifndef _XENON
  	if ( hud ) {
 		hud->SetStateString( "message", common->GetLocalizedString( "#str_102916" ) );
@@ -2637,6 +2650,11 @@ void idPlayer::Restore( idRestoreGame *savefile ) {
 	declManager->FindType( DECL_ENTITYDEF, "dmg_shellshock", false, false );
 	declManager->FindType( DECL_ENTITYDEF, "dmg_shellshock_nohl", false, false );
 // RAVEN END
+
+	
+	//savefile->ReadFloat ( stamina );
+	//savefile->ReadInt ( maxStamina );
+	//savefile->ReadFloat ( staminaRegen );
 }
 
 /*
@@ -9281,7 +9299,14 @@ Called every tic for each player
 */
 void idPlayer::Think( void ) {
 	renderEntity_t *headRenderEnt;
- 
+	
+	/*if(stamina < maxStamina)
+		stamina += staminaRegen;
+	else
+		stamina = maxStamina;
+
+	common->Printf("Stamina: %d\n", stamina);*/
+
 	if ( talkingNPC ) {
 		if ( !talkingNPC.IsValid() ) {
 			talkingNPC = NULL;
