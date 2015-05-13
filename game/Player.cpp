@@ -1340,9 +1340,13 @@ idPlayer::idPlayer() {
 	teamDoubler			= NULL;		
 	teamDoublerPending		= false;
 
-	//stamina = 100.0;
-	//maxStamina = 100;
-	//staminaRegen = 0.1;
+	stamina = 100.0;
+	maxStamina = 100;
+	staminaRegen = 0.5;
+
+	tempHealth = 100;
+	block = 0;
+	blocking = false;
 }
 
 /*
@@ -1769,9 +1773,15 @@ void idPlayer::Init( void ) {
 		teamDoubler = PlayEffect( "fx_doubler", renderEntity.origin, renderEntity.axis, true );
 	}
 
-	//stamina					= 100.0;
-	//maxStamina				= 100;
-	//staminaRegen			= 0.1;
+	stamina					= 100.0;
+	maxStamina				= 100;
+	staminaRegen			= 0.5;
+
+	tempHealth = 100;
+
+	block = 0;
+	blocking = false;
+
 }
 
 /*
@@ -2336,9 +2346,9 @@ void idPlayer::Save( idSaveGame *savefile ) const {
 	// TOSAVE: const idDeclEntityDef*	cachedWeaponDefs [ MAX_WEAPONS ];	// cnicholson: Save these?
 	// TOSAVE: const idDeclEntityDef*	cachedPowerupDefs [ POWERUP_MAX ];
 
-	//savefile->WriteFloat ( stamina );
-	//savefile->WriteInt ( maxStamina );
-	//savefile->WriteFloat ( staminaRegen );
+	savefile->WriteFloat ( stamina );
+	savefile->WriteInt ( maxStamina );
+	savefile->WriteFloat ( staminaRegen );
 
 #ifndef _XENON
  	if ( hud ) {
@@ -2652,9 +2662,9 @@ void idPlayer::Restore( idRestoreGame *savefile ) {
 // RAVEN END
 
 	
-	//savefile->ReadFloat ( stamina );
-	//savefile->ReadInt ( maxStamina );
-	//savefile->ReadFloat ( staminaRegen );
+	savefile->ReadFloat ( stamina );
+	savefile->ReadInt ( maxStamina );
+	savefile->ReadFloat ( staminaRegen );
 }
 
 /*
@@ -8520,7 +8530,11 @@ void idPlayer::PerformImpulse( int impulse ) {
 			break;
 		}
 		case IMPULSE_19: {
-/*		
+			common->Printf("Blocking");
+			block += 1;
+
+
+/*			
 			// when we're not in single player, IMPULSE_19 is used for showScores
 			// otherwise it does IMPULSE_12 (PDA)
 			if ( !gameLocal.isMultiplayer ) {
@@ -9299,13 +9313,25 @@ Called every tic for each player
 */
 void idPlayer::Think( void ) {
 	renderEntity_t *headRenderEnt;
-	
-	/*if(stamina < maxStamina)
+
+	if(stamina < maxStamina)
 		stamina += staminaRegen;
 	else
 		stamina = maxStamina;
 
-	common->Printf("Stamina: %d\n", stamina);*/
+	common->Printf("Stamina: %f\n", stamina);
+
+	if(block % 2 == 1 && stamina > 0)
+	{
+		common->Printf("Blocking\n");
+		blocking = true;
+		health = tempHealth;
+	}
+	else
+	{
+		block = 0;
+		blocking = false;
+	}
 
 	if ( talkingNPC ) {
 		if ( !talkingNPC.IsValid() ) {
@@ -10285,6 +10311,11 @@ void idPlayer::Damage( idEntity *inflictor, idEntity *attacker, const idVec3 &di
 		}
 
 		int oldHealth = health;
+		tempHealth = health;
+		if(blocking)
+		{
+			stamina -= damage*3;
+		}
 		health -= damage;
 
 		GAMELOG_ADD ( va("player%d_damage_taken", entityNumber ), damage );

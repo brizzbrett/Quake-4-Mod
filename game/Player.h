@@ -304,10 +304,6 @@ public:
 	int						lastHitTime;			// last time projectile fired by player hit target
 	int						lastSavingThrowTime;	// for the "free miss" effect
 
-	//float					stamina;
-	//int					maxStamina;
-	//float					staminaRegen;
-
 	struct playerFlags_s {
 		bool		forward			:1;
 		bool		backward		:1;
@@ -437,6 +433,14 @@ public:
 
 	void					Spawn( void );
 	void					Think( void );
+
+	float					stamina;
+	int						maxStamina;
+	float					staminaRegen;
+
+	int						tempHealth;
+	int						block;
+	bool					blocking;
 
 	// save games
 	void					Save( idSaveGame *savefile ) const;					// archives object for save game file
@@ -993,9 +997,6 @@ private:
 	bool					teamAmmoRegenPending;
 	rvClientEffectPtr		teamDoubler;
 	bool					teamDoublerPending;
-
-
-	float					stamina;
 
 	idVec4					hitscanTint;
 	// end mp

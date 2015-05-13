@@ -245,7 +245,7 @@ void rvWeaponGauntlet::Attack ( void ) {
 	idVec3		v;
 	idPlayer * player = gameLocal.GetLocalPlayer();
 
-	//player->stamina -= 10;
+	player->stamina -= 1.0;
 	for(int i = 0; i < numHits; i++)
 	{
 		if(numHits == 1)
@@ -570,6 +570,9 @@ rvWeaponGauntlet::State_Fire
 ================
 */
 stateResult_t rvWeaponGauntlet::State_Fire ( const stateParms_t& parms ) {
+
+	idPlayer * player = gameLocal.GetLocalPlayer();
+
 	enum {
 		STAGE_START,
 		STAGE_START_WAIT,
@@ -603,7 +606,18 @@ stateResult_t rvWeaponGauntlet::State_Fire ( const stateParms_t& parms ) {
 			if ( !wsfl.attack || wsfl.lowerWeapon ) {
 				return SRESULT_STAGE ( STAGE_END );
 			}
-			Attack ( );
+			if(player->stamina > 0)
+			{
+				Attack ( );
+			}
+			else
+			{
+				player->stamina = -25;
+				PlayAnim ( ANIMCHANNEL_ALL, "attack_end", parms.blendFrames );
+				StopBlade ( );
+				StartSound( "snd_spin_down", SND_CHANNEL_WEAPON, 0, false, 0 );
+				return SRESULT_STAGE ( STAGE_END_WAIT );
+			}
 			return SRESULT_WAIT;
 		
 		case STAGE_END:
