@@ -1347,6 +1347,13 @@ idPlayer::idPlayer() {
 	tempHealth = 100;
 	block = 0;
 	blocking = false;
+
+	dodging = 0;
+	dodge = false;
+
+	dodgeTime = 25;
+	maxDodgeTime = 25;
+	dodgeTimeRegen = 4.0;
 }
 
 /*
@@ -1781,6 +1788,13 @@ void idPlayer::Init( void ) {
 
 	block = 0;
 	blocking = false;
+
+	dodging = 0;
+	dodge = false;
+
+	dodgeTime = 25;
+	maxDodgeTime = 25;
+	dodgeTimeRegen = 4.0;
 
 }
 
@@ -8549,9 +8563,14 @@ void idPlayer::PerformImpulse( int impulse ) {
 			break;
 		}
 		case IMPULSE_20: {
+			common->Printf("Dodge!");
+			dodging += 1;
+			
+
+			/*
  			if ( gameLocal.isClient || entityNumber == gameLocal.localClientNum ) {
  				gameLocal.mpGame.ToggleTeam( );
-			}
+			}*/
 			break;
 		}
 		case IMPULSE_21: {
@@ -8786,8 +8805,14 @@ void idPlayer::AdjustSpeed( void ) {
 	if ( influenceActive == INFLUENCE_LEVEL3 ) {
 		speed *= 0.33f;
 	}
-
-	physicsObj.SetSpeed( speed, pm_crouchspeed.GetFloat() );
+	if(dodge == false)
+	{
+		physicsObj.SetSpeed( speed, pm_crouchspeed.GetFloat() );
+	}
+	else
+	{
+		physicsObj.SetSpeed( speed+300, pm_crouchspeed.GetFloat() + 300);
+	}
 }
 
 /*
@@ -9331,6 +9356,24 @@ void idPlayer::Think( void ) {
 	{
 		block = 0;
 		blocking = false;
+	}
+
+	if(dodgeTime < maxDodgeTime)
+		dodgeTime += dodgeTimeRegen;
+	else
+		dodgeTime = maxDodgeTime;
+
+	if(dodging % 2 == 1 && stamina > 0 && dodgeTime > 0)
+	{
+		common->Printf("Dodging\n");
+		dodge = true;
+		dodgeTime -= 7;
+		stamina -= 7;
+	}
+	else
+	{
+		dodging = 0;
+		dodge = false;
 	}
 
 	if ( talkingNPC ) {

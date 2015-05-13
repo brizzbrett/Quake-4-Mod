@@ -442,6 +442,13 @@ public:
 	int						block;
 	bool					blocking;
 
+	int						dodging;
+	bool					dodge;
+
+	float					dodgeTime;
+	int						maxDodgeTime;
+	float					dodgeTimeRegen;
+
 	// save games
 	void					Save( idSaveGame *savefile ) const;					// archives object for save game file
 	void					Restore( idRestoreGame *savefile );					// unarchives object from save game file
